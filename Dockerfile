@@ -1,12 +1,26 @@
-# Creates pseudo distributed kerberized hadoop 2.7.4
+#####################################################################################################################################################
+# Creates pseudo distributed kerberized hadoop 2.7.7
 #
-# docker build -t knappek/hadoop-secure .
-
+# docker build --rm -t knappek/hadoop-secure .
+# docker build --build-arg http_proxy=$http_proxy -t knappek/hadoop-secure .
+# 
+# docker run -it knappek/hadoop-secure /etc/bootstrap.sh -bash
+# 
+#####################################################################################################################################################
 FROM sequenceiq/pam:centos-6.5
 MAINTAINER Knappek
-
+#
 USER root
-
+# 
+ARG http_proxy
+# 
+ENV http_proxy $http_proxy
+ENV https_proxy $http_proxy
+# 
+# --------------------------------------------------
+RUN touch /var/lib/rpm/* \
+    && yum -y install yum-plugin-ovl
+# 
 # install dev tools
 RUN yum clean all; \
     rpm --rebuilddb; \
@@ -24,19 +38,21 @@ RUN ssh-keygen -q -N "" -t rsa -f /etc/ssh/ssh_host_rsa_key
 RUN ssh-keygen -q -N "" -t rsa -f /root/.ssh/id_rsa
 RUN cp /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys
 
-# java
+# JAVA
 # download/copy JDK. Comment one of these. The curl command can be retrieved
 # from https://lv.binarybabel.org/catalog/java/jdk8
-RUN curl -LOH 'Cookie: oraclelicense=accept-securebackup-cookie' 'http://download.oracle.com/otn-pub/java/jdk/8u131-b11/d54c1d3a095b4ff2b6607d096fa80163/jdk-8u131-linux-x64.rpm'
+#RUN curl --insecure -LOH 'Cookie: oraclelicense=accept-securebackup-cookie' 'http://download.oracle.com/otn-pub/java/jdk/8u131-b11/d54c1d3a095b4ff2b6607d096fa80163/jdk-8u131-linux-x64.rpm'
 #COPY local_files/jdk-8u131-linux-x64.rpm /
+COPY local_files/jdk-8u221-linux-x64.rpm /
 
-RUN rpm -i jdk-8u131-linux-x64.rpm
-RUN rm jdk-8u131-linux-x64.rpm
+RUN rpm -i jdk-8u221-linux-x64.rpm
+RUN rm jdk-8u221-linux-x64.rpm
 ENV JAVA_HOME /usr/java/default
 ENV PATH $PATH:$JAVA_HOME/bin
 RUN rm /usr/bin/java && ln -s $JAVA_HOME/bin/java /usr/bin/java
 
-RUN curl -LOH 'Cookie: oraclelicense=accept-securebackup-cookie' 'http://download.oracle.com/otn-pub/java/jce/8/jce_policy-8.zip'
+#RUN curl --insecure -LOH 'Cookie: oraclelicense=accept-securebackup-cookie' 'http://download.oracle.com/otn-pub/java/jce/8/jce_policy-8.zip'
+COPY local_files/jce_policy-8.zip /
 RUN unzip jce_policy-8.zip
 RUN cp /UnlimitedJCEPolicyJDK8/local_policy.jar /UnlimitedJCEPolicyJDK8/US_export_policy.jar $JAVA_HOME/jre/lib/security
 
@@ -48,15 +64,14 @@ RUN touch /var/log/kerberos/kadmind.log
 # hadoop
 # download/copy hadoop. Choose one of these options
 ENV HADOOP_PREFIX /usr/local/hadoop
-RUN curl -s http://www.eu.apache.org/dist/hadoop/common/hadoop-2.7.4/hadoop-2.7.4.tar.gz | tar -xz -C /usr/local/
-#COPY local_files/hadoop-2.7.4.tar.gz $HADOOP_PREFIX-2.7.4.tar.gz
-#RUN tar -xzvf $HADOOP_PREFIX-2.7.4.tar.gz -C /usr/local
+RUN curl --insecure -s http://apache.mirror.anlx.net/hadoop/common/hadoop-2.7.7/hadoop-2.7.7.tar.gz | tar -xz -C /usr/local/
+#COPY local_files/hadoop-2.7.7.tar.gz $HADOOP_PREFIX-2.7.7.tar.gz
+#RUN tar -xzvf $HADOOP_PREFIX-2.7.7.tar.gz -C /usr/local
 RUN cd /usr/local \
-    && ln -s ./hadoop-2.7.4 hadoop \
+    && ln -s ./hadoop-2.7.7 hadoop \
     && chown root:root -R hadoop/
 
-
-
+#====================================================================================================================================================
 ENV HADOOP_COMMON_HOME $HADOOP_PREFIX
 ENV HADOOP_HDFS_HOME $HADOOP_PREFIX
 ENV HADOOP_MAPRED_HOME $HADOOP_PREFIX
@@ -90,12 +105,13 @@ ADD config_files/ssl-server.xml $HADOOP_PREFIX/etc/hadoop/ssl-server.xml
 ADD config_files/ssl-client.xml $HADOOP_PREFIX/etc/hadoop/ssl-client.xml
 ADD config_files/keystore.jks $HADOOP_PREFIX/lib/keystore.jks
 
+#====================================================================================================================================================
 
 # fetch hadoop source code to build some binaries natively
 # for this, protobuf is needed
-RUN curl -L https://github.com/google/protobuf/releases/download/v2.5.0/protobuf-2.5.0.tar.gz | tar -xz -C /tmp/
-#COPY local_files/protobuf-2.5.0.tar.gz /tmp/protobuf-2.5.0.tar.gz
-#RUN tar -xzf /tmp/protobuf-2.5.0.tar.gz -C /tmp/
+#RUN curl --insecure -L https://github.com/google/protobuf/releases/download/v2.5.0/protobuf-2.5.0.tar.gz | tar -xz -C /tmp/
+COPY local_files/protobuf-2.5.0.tar.gz /tmp/protobuf-2.5.0.tar.gz
+RUN tar -xzf /tmp/protobuf-2.5.0.tar.gz -C /tmp/
 
 RUN cd /tmp/protobuf-2.5.0 \
     && ./configure \
@@ -103,28 +119,32 @@ RUN cd /tmp/protobuf-2.5.0 \
     && make install
 ENV HADOOP_PROTOC_PATH /usr/local/bin/protoc
 
-RUN curl -L http://ftp-stud.hs-esslingen.de/pub/Mirrors/ftp.apache.org/dist/maven/maven-3/3.5.0/binaries/apache-maven-3.5.0-bin.tar.gz | tar -xz -C /usr/local
+RUN curl --insecure -L https://archive.apache.org/dist/maven/maven-3/3.5.0/binaries/apache-maven-3.5.0-bin.tar.gz | tar -xz -C /usr/local
 #COPY local_files/apache-maven-3.5.0-bin.tar.gz /tmp/apache-maven-3.5.0-bin.tar.gz
 #RUN tar -xzf /tmp/apache-maven-3.5.0-bin.tar.gz -C /usr/local
 
 RUN cd /usr/local && ln -s ./apache-maven-3.5.0/ maven
 ENV PATH $PATH:/usr/local/maven/bin
 
-RUN curl -L http://www.eu.apache.org/dist/hadoop/common/hadoop-2.7.4/hadoop-2.7.4-src.tar.gz | tar -xz -C /tmp
-#COPY local_files/hadoop-2.7.4-src.tar.gz /tmp/hadoop-2.7.4-src.tar.gz
-#RUN tar -xzf /tmp/hadoop-2.7.4-src.tar.gz -C /tmp
-
+RUN curl -L http://www.eu.apache.org/dist/hadoop/common/hadoop-2.7.7/hadoop-2.7.7-src.tar.gz | tar -xz -C /tmp
+#COPY local_files/hadoop-2.7.7-src.tar.gz /tmp/hadoop-2.7.7-src.tar.gz
+#RUN tar -xzf /tmp/hadoop-2.7.7-src.tar.gz -C /tmp
+#
+#
+#==========================================================================
 # build native hadoop-common libs to remove warnings because of 64 bit OS
-RUN rm -rf $HADOOP_PREFIX/lib/native
-RUN cd /tmp/hadoop-2.7.4-src/hadoop-common-project/hadoop-common \
-    && mvn compile -Pnative \
-    && cp target/native/target/usr/local/lib/libhadoop.a $HADOOP_PREFIX/lib/native \
-    && cp target/native/target/usr/local/lib/libhadoop.so.1.0.0 $HADOOP_PREFIX/lib/native
+#RUN rm -rf $HADOOP_PREFIX/lib/native
+#RUN cd /tmp/hadoop-2.7.7-src/hadoop-common-project/hadoop-common \
+#    && mvn compile -Pnative \
+#    && cp target/native/target/usr/local/lib/libhadoop.a $HADOOP_PREFIX/lib/native \
+#    && cp target/native/target/usr/local/lib/libhadoop.so.1.0.0 $HADOOP_PREFIX/lib/native
+#==========================================================================
 # build container-executor binary
-RUN cd /tmp/hadoop-2.7.4-src/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager \
-    && mvn compile -Pnative \
-    && cp target/native/target/usr/local/bin/container-executor $HADOOP_PREFIX/bin/ \
-    && chmod 6050 $HADOOP_PREFIX/bin/container-executor
+#RUN cd /tmp/hadoop-2.7.7-src/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager \
+#    && mvn compile -Pnative \
+#    && cp target/native/target/usr/local/bin/container-executor $HADOOP_PREFIX/bin/ \
+#    && chmod 6050 $HADOOP_PREFIX/bin/container-executor
+#==========================================================================
 
 ADD config_files/ssh_config /root/.ssh/config
 RUN chmod 600 /root/.ssh/config
@@ -146,7 +166,7 @@ RUN echo "UsePAM no" >> /etc/ssh/sshd_config
 RUN echo "Port 2122" >> /etc/ssh/sshd_config
 
 CMD ["/etc/bootstrap.sh", "-d"]
-
+#====================================================================================================================================================
 # Hdfs ports
 EXPOSE 50010 50020 50070 50075 50090 8020 9000
 # Mapred ports
@@ -155,3 +175,5 @@ EXPOSE 10020 19888
 EXPOSE 8030 8031 8032 8033 8040 8042 8088
 #Other ports
 EXPOSE 49707 2122
+
+#====================================================================================================================================================
