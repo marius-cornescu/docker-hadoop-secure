@@ -14,7 +14,7 @@ Versions
 --------
 
 * JDK8 
-* Hadoop 2.7.1
+* Hadoop 2.7.7
 * Maven 3.5.0
 
 Default Environment Variables

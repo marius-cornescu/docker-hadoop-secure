@@ -21,8 +21,8 @@ services:
       DOMAIN_REALM: kdc.kerberos.com
     volumes:
       - "./config_files/krb5.conf:/etc/krb5.conf"
-      - "/dev/urandom:/dev/random"
-      - "/etc/localtime:/etc/localtime:ro"
+#      - "/dev/urandom:/dev/random"
+#      - "/etc/localtime:/etc/localtime:ro"
 
   hadoop-secure:
     networks:
@@ -42,4 +42,4 @@ services:
       FQDN: hadoop.docker.com
     volumes:
       - "./config_files/krb5.conf:/etc/krb5.conf"
-      - "/etc/localtime:/etc/localtime:ro"
+#      - "/etc/localtime:/etc/localtime:ro"
