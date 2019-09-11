@@ -65,10 +65,21 @@ chmod 400 ${KEYTAB_DIR}/rm.service.keytab
 chmod 400 ${KEYTAB_DIR}/nm.service.keytab
 
 $HADOOP_PREFIX/bin/hdfs namenode -format
+# set the USER env variable
+export USER=`whoami`
+
+echo -e "\e[1;31m > Start SSHD \e[0m"
 service sshd start
+#
 $HADOOP_PREFIX/etc/hadoop/hadoop-env.sh
+#
+echo -e "\e[1;31m > Start HADOOP:DFS \e[0m"
 $HADOOP_PREFIX/sbin/start-dfs.sh
+#
+echo -e "\e[1;31m > Start HADOOP:Yarn \e[0m"
 $HADOOP_PREFIX/sbin/start-yarn.sh
+#
+echo -e "\e[1;31m > Start HADOOP:JobHistoryServer \e[0m"
 $HADOOP_PREFIX/sbin/mr-jobhistory-daemon.sh start historyserver
 
 if [[ $1 == "-d" ]]; then

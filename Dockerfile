@@ -2,7 +2,7 @@
 # Creates pseudo distributed kerberized hadoop 2.7.7
 #
 # docker build --rm -t knappek/hadoop-secure .
-# docker build --build-arg http_proxy=$http_proxy -t knappek/hadoop-secure .
+# docker build --rm --build-arg http_proxy=$http_proxy -t knappek/hadoop-secure .
 # 
 # docker run -it knappek/hadoop-secure /etc/bootstrap.sh -bash
 # 
@@ -17,7 +17,7 @@ ARG http_proxy
 ENV http_proxy $http_proxy
 ENV https_proxy $http_proxy
 # 
-# --------------------------------------------------
+#====================================================================================================================================================
 RUN touch /var/lib/rpm/* \
     && yum -y install yum-plugin-ovl
 # 
@@ -31,7 +31,7 @@ RUN yum clean all; \
 RUN yum update -y libselinux
 
 RUN echo 'alias ll="ls -alF"' >> /root/.bashrc
-
+# 
 # passwordless ssh
 RUN ssh-keygen -q -N "" -t dsa -f /etc/ssh/ssh_host_dsa_key
 RUN ssh-keygen -q -N "" -t rsa -f /etc/ssh/ssh_host_rsa_key
@@ -78,6 +78,7 @@ ENV HADOOP_MAPRED_HOME $HADOOP_PREFIX
 ENV HADOOP_YARN_HOME $HADOOP_PREFIX
 ENV HADOOP_CONF_DIR $HADOOP_PREFIX/etc/hadoop
 ENV YARN_CONF_DIR $HADOOP_PREFIX/etc/hadoop
+# 
 ENV NM_CONTAINER_EXECUTOR_PATH $HADOOP_PREFIX/bin/container-executor
 ENV HADOOP_BIN_HOME $HADOOP_PREFIX/bin
 ENV PATH $PATH:$HADOOP_BIN_HOME
@@ -92,7 +93,7 @@ ENV FQDN hadoop.com
 
 RUN mkdir $HADOOP_PREFIX/input
 RUN cp $HADOOP_PREFIX/etc/hadoop/*.xml $HADOOP_PREFIX/input
-
+# 
 ADD config_files/hadoop-env.sh $HADOOP_PREFIX/etc/hadoop/hadoop-env.sh
 ADD config_files/core-site.xml $HADOOP_PREFIX/etc/hadoop/core-site.xml
 ADD config_files/hdfs-site.xml $HADOOP_PREFIX/etc/hadoop/hdfs-site.xml
@@ -149,16 +150,18 @@ RUN curl -L http://www.eu.apache.org/dist/hadoop/common/hadoop-2.7.7/hadoop-2.7.
 ADD config_files/ssh_config /root/.ssh/config
 RUN chmod 600 /root/.ssh/config
 RUN chown root:root /root/.ssh/config
-
+# 
 ENV BOOTSTRAP /etc/bootstrap.sh
 ADD bootstrap.sh $BOOTSTRAP
 RUN chown root:root $BOOTSTRAP
 RUN chmod 700 $BOOTSTRAP
-
-# workingaround docker.io build error
+# 
+# --------------------------------------------------
+# working around docker.io build error
 RUN ls -la $HADOOP_PREFIX/etc/hadoop/*-env.sh
 RUN chmod +x $HADOOP_PREFIX/etc/hadoop/*-env.sh
 RUN ls -la $HADOOP_PREFIX/etc/hadoop/*-env.sh
+# --------------------------------------------------
 
 # fix the 254 error code
 RUN sed  -i "/^[^#]*UsePAM/ s/.*/#&/"  /etc/ssh/sshd_config
@@ -166,6 +169,7 @@ RUN echo "UsePAM no" >> /etc/ssh/sshd_config
 RUN echo "Port 2122" >> /etc/ssh/sshd_config
 
 CMD ["/etc/bootstrap.sh", "-d"]
+
 #====================================================================================================================================================
 # Hdfs ports
 EXPOSE 50010 50020 50070 50075 50090 8020 9000
@@ -173,7 +177,8 @@ EXPOSE 50010 50020 50070 50075 50090 8020 9000
 EXPOSE 10020 19888
 #Yarn ports
 EXPOSE 8030 8031 8032 8033 8040 8042 8088
+#SSHD port
+EXPOSE 2122
 #Other ports
-EXPOSE 49707 2122
-
-#====================================================================================================================================================
+EXPOSE 49707
+#####################################################################################################################################################
