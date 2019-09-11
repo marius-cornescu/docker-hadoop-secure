@@ -24,7 +24,7 @@ RUN touch /var/lib/rpm/* \
 # install dev tools
 RUN yum clean all; \
     rpm --rebuilddb; \
-    yum install -y curl which tar sudo openssh-server openssh-clients rsync \ 
+    yum install -y curl which tar sudo openssh-server openssh-clients rsync wget \ 
     vim rsyslog unzip glibc-devel \
     glibc-headers gcc-c++ cmake git zlib-devel
 # update libselinux. see https://github.com/sequenceiq/hadoop-docker/issues/14
@@ -126,6 +126,8 @@ RUN curl --insecure -L https://archive.apache.org/dist/maven/maven-3/3.5.0/binar
 
 RUN cd /usr/local && ln -s ./apache-maven-3.5.0/ maven
 ENV PATH $PATH:/usr/local/maven/bin
+
+COPY config_files/mvn_settings.xml /usr/local/maven/conf/settings.xml
 
 RUN curl -L http://www.eu.apache.org/dist/hadoop/common/hadoop-2.7.7/hadoop-2.7.7-src.tar.gz | tar -xz -C /tmp
 #COPY local_files/hadoop-2.7.7-src.tar.gz /tmp/hadoop-2.7.7-src.tar.gz
