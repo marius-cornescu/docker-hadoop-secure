@@ -120,14 +120,14 @@ RUN cd /tmp/protobuf-2.5.0 \
     && make install
 ENV HADOOP_PROTOC_PATH /usr/local/bin/protoc
 
-RUN curl --insecure -L https://archive.apache.org/dist/maven/maven-3/3.5.0/binaries/apache-maven-3.5.0-bin.tar.gz | tar -xz -C /usr/local
-#COPY local_files/apache-maven-3.5.0-bin.tar.gz /tmp/apache-maven-3.5.0-bin.tar.gz
-#RUN tar -xzf /tmp/apache-maven-3.5.0-bin.tar.gz -C /usr/local
+#RUN curl --insecure -L https://archive.apache.org/dist/maven/maven-3/3.5.0/binaries/apache-maven-3.5.0-bin.tar.gz | tar -xz -C /usr/local
+COPY local_files/apache-maven-3.5.0-bin.tar.gz /tmp/apache-maven-3.5.0-bin.tar.gz
+RUN tar -xzf /tmp/apache-maven-3.5.0-bin.tar.gz -C /usr/local
 
 RUN cd /usr/local && ln -s ./apache-maven-3.5.0/ maven
 ENV PATH $PATH:/usr/local/maven/bin
 
-COPY config_files/mvn_settings.xml /usr/local/maven/conf/settings.xml
+#COPY config_files/mvn_settings.xml /usr/local/maven/conf/settings.xml
 
 RUN curl -L http://www.eu.apache.org/dist/hadoop/common/hadoop-2.7.7/hadoop-2.7.7-src.tar.gz | tar -xz -C /tmp
 #COPY local_files/hadoop-2.7.7-src.tar.gz /tmp/hadoop-2.7.7-src.tar.gz
@@ -136,17 +136,17 @@ RUN curl -L http://www.eu.apache.org/dist/hadoop/common/hadoop-2.7.7/hadoop-2.7.
 #
 #==========================================================================
 # build native hadoop-common libs to remove warnings because of 64 bit OS
-#RUN rm -rf $HADOOP_PREFIX/lib/native
-#RUN cd /tmp/hadoop-2.7.7-src/hadoop-common-project/hadoop-common \
-#    && mvn compile -Pnative \
-#    && cp target/native/target/usr/local/lib/libhadoop.a $HADOOP_PREFIX/lib/native \
-#    && cp target/native/target/usr/local/lib/libhadoop.so.1.0.0 $HADOOP_PREFIX/lib/native
+RUN rm -rf $HADOOP_PREFIX/lib/native
+RUN cd /tmp/hadoop-2.7.7-src/hadoop-common-project/hadoop-common \
+    && mvn compile -Pnative \
+    && cp target/native/target/usr/local/lib/libhadoop.a $HADOOP_PREFIX/lib/native \
+    && cp target/native/target/usr/local/lib/libhadoop.so.1.0.0 $HADOOP_PREFIX/lib/native
 #==========================================================================
 # build container-executor binary
-#RUN cd /tmp/hadoop-2.7.7-src/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager \
-#    && mvn compile -Pnative \
-#    && cp target/native/target/usr/local/bin/container-executor $HADOOP_PREFIX/bin/ \
-#    && chmod 6050 $HADOOP_PREFIX/bin/container-executor
+RUN cd /tmp/hadoop-2.7.7-src/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager \
+    && mvn compile -Pnative \
+    && cp target/native/target/usr/local/bin/container-executor $HADOOP_PREFIX/bin/ \
+    && chmod 6050 $HADOOP_PREFIX/bin/container-executor
 #==========================================================================
 
 ADD config_files/ssh_config /root/.ssh/config
